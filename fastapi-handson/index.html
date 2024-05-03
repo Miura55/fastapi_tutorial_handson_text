@@ -1,0 +1,754 @@
+
+<!doctype html>
+
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
+  <meta name="theme-color" content="#4F7DC9">
+  <meta charset="UTF-8">
+  <title>FastAPI入門ハンズオン</title>
+  <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Source+Code+Pro:400|Roboto:400,300,400italic,500,700|Roboto+Mono">
+  <link rel="stylesheet" href="//fonts.googleapis.com/icon?family=Material+Icons">
+  <link rel="stylesheet" href="https://storage.googleapis.com/claat-public/codelab-elements.css">
+  <style>
+    .success {
+      color: #1e8e3e;
+    }
+    .error {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <google-codelab-analytics gaid="UA-49880327-14"></google-codelab-analytics>
+  <google-codelab codelab-gaid=""
+                  id="fastapi-handson"
+                  title="FastAPI入門ハンズオン"
+                  environment="web"
+                  feedback-link="https://twitter.com/k_miura_io">
+    
+      <google-codelab-step label="はじめに" duration="0">
+        <p>このハンズオンはPythonのWebフレームワークであるFastAPIを使ったWebアプリケーションを開発するハンズオンの資料です。</p>
+<h2 is-upgraded>ハンズオンの構成</h2>
+<p>ハンズオンは以下の構成で進めていきます。</p>
+<p>Step1では簡単なAPIを使ってWebアプリケーションの動かす仕組みを理解していきます</p>
+<p>Step2では使用したAPIの使い方をわかりやすく整理するためにOpenAPIのドキュメントを作成します。</p>
+<p>Step3ではデータベースを使ったAPIを開発していきます。</p>
+<p>Step4ではHTMLを用意してStep1〜3で作成したAPIを使用したWebアプリケーションを開発していきます。</p>
+<p>最終的には簡易的な掲示板アプリを作成することを目指します。</p>
+<h2 is-upgraded>FastAPIについて解説</h2>
+<p class="image-container"><img style="width: 601.70px" src="img\\a1beb692b5b79c5b.png"></p>
+<p>FastAPIはPythonのWebフレームワークの中では比較的新しいフレームワークで、非同期処理に対応しています。Flaskに近い記法なのでFlask触ったことある方なら同じ感覚でAPIを実装できます。</p>
+<p>名前の通り、公式ドキュメント上ではNode.jsやGo言語で作成したWebアプリケーションと同じぐらい高速な処理を実現していると述べています。また、処理だけではなく型定義などを明確にすることでより高速に開発することをサポートしてくれます。</p>
+<p>APIの動作確認にはOpenAPIというドキュメントを使用することになりますが、これはFastAPIのデフォルトの機能として提供されており、リクエストとレスポンスのスキーマをAPIごとに定義するだけで効率よくAPIドキュメントを作ることができます。これらも前述した型定義を明確にすることでAPIの定義が明確になりAPIの動作確認も簡単になります。</p>
+<p>Djangoよりも機能が簡易的なため、動作が軽い一方でデータベースと接続したり、HTMLで画面表示をする時などには他のライブラリ、プラグインを追加する必要があります。そのあたりは本ハンズオンでも言及していきます。</p>
+<p>次のページから早速ハンズオンを進めていきましょう。</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="ハンズオンの準備" duration="0">
+        <h2 is-upgraded>Gitpodのワークスペースを用意する</h2>
+<p>今回は簡単に環境構築をできるようにGitpodというサービスを使用してオンラインの開発環境を構築します。以下のリポジトリにアクセスします。</p>
+<p><a href="https://github.com/Miura55/chatgptbot-handson" target="_blank">https://github.com/Miura55/chatgptbot-handson</a></p>
+<p>レポジトリの下部にあるREADMEにある <code>Open in Gitpod</code> をクリックすることで今回のハンズオンの開発を構築します。</p>
+<p class="image-container"><img style="width: 601.70px" src="img\\4f59f17aba51706c.png"></p>
+<p>以下のようにオンラインのIDEが起動されたら開発環境構築は完了です。</p>
+<p class="image-container"><img style="width: 601.70px" src="img\\c68a8dc5f3bec13e.png"></p>
+<p>ここまでできたらハンズオンの準備は完了です。次のステップでからハンズオンを進めていきましょう。</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Step1. 初めてのAPI" duration="0">
+        <h2 is-upgraded>サーバーを立ち上げる</h2>
+<p>最初のステップとして、シンプルなAPIを開発していきます。</p>
+<p>まずは今回開発するアプリケーションのソースコードを用意します。以下のコマンドを実行して新規でファイルを作成します。</p>
+<pre><code>touch /workspace/gitpod-python-playground/main.py</code></pre>
+<p>ターミナルに貼り付けるときに以下のダイアログが表示されたらコピペを許可することでエディタ上でコピペができるようになります。</p>
+<p class="image-container"><img style="width: 324.00px" src="img\\e7b575ff2486538e.png"></p>
+<p>テキストエディタで上記のコマンドで作成した <code>main.py</code> を開き、以下のコードを書き込みます。</p>
+<pre><code>from fastapi import FastAPI, Depends, HTTPException, Request
+import logging
+
+app = FastAPI()
+logger = logging.getLogger(&#39;uvicorn&#39;)
+
+@app.get(&#34;/&#34;)
+async def root():
+    return {&#34;message&#34;: &#34;Hello World&#34;}
+</code></pre>
+<p>Gitpodはソースコードが自動保存されるので、このままターミナルを起動します。ターミナルは <code>Ctrl + ` (Macの場合はCtrl + `)</code> を入力することで起動します。</p>
+<p>起動したら以下のコマンドを実行してアプリケーションを立ち上げます。</p>
+<pre><code>uvicorn main:app --reload --host 0.0.0.0</code></pre>
+<p>実行後、ターミナルで以下のようなログが出力されれば、サーバーは正常に起動しています。</p>
+<p>これでコードが修正されて保存される度にサーバーが自動で立ち上げ直してくれるようになります。</p>
+<pre><code>INFO:     Will watch for changes in these directories: [&#39;/workspace/gitpod-python-playground&#39;]
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [17711] using StatReload
+INFO:     Started server process [17713]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.</code></pre>
+<p>起動するとエディタの右下にある <code>Make Public</code> をクリックすることで立ち上げたサーバーを公開できる状態になります。</p>
+<p class="image-container"><img style="width: 456.00px" src="img\\47277bbe55d38784.png"></p>
+<p>エディタの下にある PORTS タブをクリックすると払い出されたポートのURLが一覧で表示されます。この一覧の中にある8000番ポートの行にある地球のアイコンをクリックするとブラウザで起動しているWebページを開くことができます。</p>
+<p class="image-container"><img style="width: 601.70px" src="img\\dd31abe03f3716b3.png"></p>
+<p>別タブが開き、以下のJSONが表示されたらサーバーの接続は問題ありません。開いた時に使用したURLはこの後に手順で必要になるのでどこかにメモしておきます。</p>
+<p class="image-container"><img style="width: 211.00px" src="img\\e8e000154f7afb7d.png"></p>
+<h2 is-upgraded>データをサーバーに送信する</h2>
+<p>次はこのサーバーに何かしらのデータを送信する機能を実装します。今回は、掲示板アプリに投稿するのに必要なメッセージを送信できるようにしてみます。</p>
+<p>送信する内容は以下の形式のJSONです。</p>
+<pre><code>{
+  &#34;title&#34;: &#34;初投稿&#34;
+  &#34;content&#34;: &#34;Hello World&#34;
+  &#34;user_name&#34;: &#34;Taro&#34;
+}</code></pre>
+<p>まずはこのJSONを送信するためにスキーマを定義します。以下のコマンドを実行してJSONのフォーマットを定義するためのファイルを新規で作成します。</p>
+<pre><code>touch /workspace/gitpod-python-playground/schemes.py</code></pre>
+<p><code>schemes.py</code> のファイルを開き、以下のコードを書き込みます。</p>
+<pre><code>from pydantic import BaseModel
+
+class EntryRequest(BaseModel):
+    title: str
+    content: str
+    user_name: str
+</code></pre>
+<p>保存したら、 main.py を開いて以下の1行を import文 の記述に追加します。</p>
+<pre><code>import schemes</code></pre>
+<p>import文の記述が以下の通りになっていれば問題ありません。</p>
+<pre><code>from fastapi import FastAPI
+import logging
+import schemes</code></pre>
+<p>続けて main.py の最後に以下の関数を追加します。</p>
+<pre><code>@app.post(&#34;/entry&#34;)
+async def create_entry(entry: schemes.EntryRequest):
+    logger.info(f&#34;Received entry: {entry}&#34;)
+    return {&#34;message&#34;: &#34;Entry created&#34;}
+</code></pre>
+<p>記述が終わるとコードが自動で保存されてサーバーが再起動します。再起動したら、サーバーを起動しているターミナルとは別にもう一つターミナルを開きます。ターミナルはターミナルの右上の＋ボタンをクリックすると開くことができます。</p>
+<p>以下の2行のコマンドでサーバーにデータを送信してみます。【メモしたGitpodのサーバーURL】の箇所は先ほどブラウザの表示を確認した時にメモしたGitpodのサーバーURLに書き換えます。 <code>export SERVER_URL=【メモしたGitpodのサーバーURL】</code> のときにURLの末尾に <code>/</code> を含めないように気をつけます。</p>
+<pre><code>export SERVER_URL=【メモしたGitpodのサーバーURL】
+curl -X POST ${SERVER_URL}/entry -H &#34;Content-Type: application/json&#34; -d &#39;{&#34;title&#34;: &#34;初投稿&#34;, &#34;content&#34;: &#34;Hello World&#34;, &#34;user_name&#34;: &#34;Taro&#34;}&#39;</code></pre>
+<p>コマンドを実行し、サーバーのレスポンスである以下の実行結果が表示されていればサーバーは正常に動作しています。もしエラーが出る場合は変数のURLを設定した時に不要なスペースなどが無いかご確認ください。</p>
+<p>コマンドを実行したターミナルはこの後実装するAPIの動作確認でも使用するので閉じなくて結構です。</p>
+<pre><code>{&#34;message&#34;:&#34;Entry created&#34;}</code></pre>
+<p>アプリケーションを立ち上げているサーバーを動かしているターミナルを確認すると以下の通りログが出力されてサーバーでコマンドで送信したデータが受け取れていることが確認できます。</p>
+<pre><code>INFO:     Received entry: title=&#39;初投稿&#39; content=&#39;Hello World&#39; user_name=&#39;Taro&#39;</code></pre>
+<h2 is-upgraded>パスパラメータ</h2>
+<p>続いて、パスパラメータを扱うAPIを実装します。パスパラメータとは簡単に言うとURLの中に埋め込まれた値をアプリケーションの変数として扱うことを指します。例えば、ユーザーIDを指定してそのユーザーの情報を取得するときなどに活用されます。今回は掲示板の投稿IDを指定することでその投稿が削除されるAPIを用意します。</p>
+<p><code>main.py</code> の一番下に以下の関数を追加します。</p>
+<pre><code>@app.delete(&#34;/entry/{entry_id}&#34;)
+async def delete_entry(entry_id: int):
+    logger.info(f&#34;Entry {entry_id} deleted&#34;)
+    return {&#34;message&#34;: &#34;Entry deleted&#34;}
+</code></pre>
+<p>書き込みを終えて、自動保存と再起動が行われたら、POSTのAPIを実行した時に使用したターミナルを開き、以下のコマンドを実行します。</p>
+<pre><code>export SERVER_URL=【メモしたGitpodのサーバーURL】
+curl -X DELETE ${SERVER_URL}/entry/1</code></pre>
+<p>コマンドを実行し、以下のJSONで実行結果が表示されたらAPIは正常に動作しています。</p>
+<pre><code>{&#34;message&#34;:&#34;Entry 1 deleted&#34;}</code></pre>
+<p>ちなみにこのAPIはint型しか受け付けないので、それ以外の型でパスパラメータのリクエストを送信すると弾かれるように作られています。試しに以下のリクエストで文字列を送信してみます。</p>
+<pre><code>curl -X DELETE ${SERVER_URL}/entry/hello</code></pre>
+<p>実行後、以下の通りエラーがレスポンスとして返ってきます。</p>
+<pre><code>{
+  &#34;detail&#34;: [
+    {
+      &#34;type&#34;: &#34;int_parsing&#34;,
+      &#34;loc&#34;: [
+        &#34;path&#34;,
+        &#34;entry_id&#34;
+      ],
+      &#34;msg&#34;: &#34;Input should be a valid integer, unable to parse string as an integer&#34;,
+      &#34;input&#34;: &#34;hello&#34;
+    }
+  ]
+}
+</code></pre>
+<p>ここまでFastAPIで最小構成でAPIを用意しました。APIの通信を実装、コマンドを通じて理解していただけたかと思います。</p>
+<p>ここではAPIの動作確認をCurlコマンドを使用していましたが、実はFastAPIの標準機能にあるOpenAPIを使うことでブラウザ上でAPIの動作確認をすることができます。そこで次のパートではOpenAPIを使ってAPIを実行する方法を紹介します。</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Step2. OpenAPIを触っていく" duration="0">
+        <p>Step1ではAPIを実装し、そのAPIの動作確認をCurlコマンドで行いました。通常のフレームワークでAPIを動作確認する時にはこの方法で行うのが一番簡単ですが、FastAPIであればもっと簡単にAPIの動作確認をする方法として、OpenAPIを使う方法があります。</p>
+<p>OpenAPIとはWebアプリケーションとAPIで通信を行うための規格を指しています。FastAPIはそのOpenAPIに準拠したAPIを構築できるような設計になっており、APIを実装するだけでOpenAPIの規格に倣ったAPIの仕様書が生成されるようになります。この仕様書とその動作確認をするためのUIが提供されています。</p>
+<h2 is-upgraded>まずは動かしてみる</h2>
+<p>まずは、OpenAPIのドキュメントを開いてみます。OpenAPIのドキュメントはブラウザで <code>【GitpodのサーバーURL】/docs</code> で開くと以下のAPIのドキュメントが表示されます。</p>
+<p class="image-container"><img style="width: 601.70px" src="img\\eb9b738fb872e08a.png"></p>
+<p>試しに「GET」の行にあるトグルをクリックするとAPIの情報が表示されます。</p>
+<p class="image-container"><img style="width: 601.70px" src="img\\14edd5ba1534ea5f.png"></p>
+<p>試しに「Try it out」ボタンをクリックした時に表示される「Execute」ボタンをクリックすると以下の通り実行したAPIのCurlコマンド、及びその実行結果が表示されます。</p>
+<p class="image-container"><img style="width: 601.70px" src="img\\4c0738c9a0c59286.png"></p>
+<p>ここで表示されているCurlコマンドをそのままターミナルで実行すれば、同様の結果が返ってくることが確認できます。なので、作者もFastAPIでAPIを実装したらまずはこのOpenAPIを使って動作確認を行い、その後ターミナルで繰り返し動作確認したいときには、OpenAPIが生成したCurlコマンドを実行するということも多いです。</p>
+<h2 is-upgraded>OpenAPIで仕様を詳細に定義する</h2>
+<h3 is-upgraded>レスポンスのスキーマを定義する</h3>
+<p>OpenAPIを使ってAPIドキュメントを生成することができますが、現状の実装で生成されたAPIドキュメントは仕様書としては不完全なものです。なぜなら、APIのリクエストは詳細に定義されていますが、そのレスポンスのスキーマは明確には定義されていないからです。</p>
+<p>先ほど動作確認した <code>GET /</code> のAPIのレスポンスを確認するとレスポンスとしてJSONが表示されるはずですが、ドキュメント上ではデフォルトの設定である文字列を返すようになっています。</p>
+<p class="image-container"><img style="width: 601.70px" src="img\\5abb20850cb977f2.png"></p>
+<p>FastAPIではリクエストと同様にレスポンスのスキーマもコードで定義すれば、APIドキュメントにその内容を反映させることができます。</p>
+<p>Step1で実装したAPIのレスポンスはすべて共通のJSONになっているので、そのスキーマを定義します。</p>
+<p><code>shemes.py</code> を開き、以下のClass文を追加します。</p>
+<pre><code>class MessageResponse(BaseModel):
+    message: str
+</code></pre>
+<p>追加後にAPIの定義をしている行に以下の通り <code>response_model=schemes.MessageResponse</code> を追加します。</p>
+<pre><code>@app.get(&#34;/&#34;, response_model=schemes.MessageResponse)
+...
+
+@app.post(&#34;/entry&#34;, response_model=schemes.MessageResponse)
+...
+
+@app.delete(&#34;/entry/{entry_id}&#34;, response_model=schemes.MessageResponse)
+...
+</code></pre>
+<p>自動保存されて自動保存されたら、ドキュメントをリロードします。リロードすると以下の通りAPIのレスポンスのフォーマットが表示されることが確認できます。</p>
+<p class="image-container"><img style="width: 601.70px" src="img\\e70092168600d01c.png"></p>
+<h3 is-upgraded>サンプルのパラメータを設定する</h3>
+<p>リクエスト、レスポンスボディをそれぞれ定義しました。ただ、ここでは文字列を送信するということでサンプルのパラメータはすべて <code>string</code> になっていますが、もう少し具体的なパラメータをイメージできるようにサンプルのパラメータを設定することもできます。</p>
+<p>そのやり方は簡単で <code>schemes.py</code> で定義した型にそれぞれ適切なサンプルパラメータを設定するだけです。</p>
+<p>今回用意した schemes.py の場合では以下の通りサンプルのパラメータを定義してみます。</p>
+<pre><code>class EntryRequest(BaseModel):
+    title: str = &#39;Title&#39;
+    content: str = &#39;This is content&#39;
+    user_name: str = &#39;User&#39;
+
+
+class MessageResponse(BaseModel):
+    message: str = &#39;This message is example&#39;
+</code></pre>
+<p>自動保存、サーバーが再起動されたら再びドキュメントをリロードしてみます。すると、以下の通りスキーマで設定したパラメータがドキュメントに反映されていることが確認できます。</p>
+<p class="image-container"><img style="width: 601.70px" src="img\\31cfdfc7563ed2cd.png"></p>
+<h3 is-upgraded>APIの説明を加える</h3>
+<p>これでAPIのリクエストとレスポンスがドキュメントがイメージできるようになりました。ただ、APIのリクエストとレスポンスだけがあってもそのAPIの使い方、どのような使い方をすべきかを簡単な説明があるとよりわかりやすくなります。</p>
+<p>各APIに関する説明は、<code>main.py</code> にあるAPIのルーティング設定に引数 <code>description</code> で設定することでAPIの情報を反映させることができます。</p>
+<pre><code>@app.get(&#34;/&#34;, response_model=schemes.MessageResponse, description=&#34;接続確認用のAPIです。&#34;)
+...
+
+@app.post(&#34;/entry&#34;, response_model=schemes.MessageResponse, description=&#34;掲示板にエントリーを新規追加します。&#34;)
+...
+
+@app.delete(&#34;/entry/{entry_id}&#34;, response_model=schemes.MessageResponse, description=&#34;IDを指定して掲示板のエントリーを削除します。&#34;)
+...</code></pre>
+<p>自動保存、サーバーの再起動が行われたらドキュメントをリロードしてみます。リロードして以下の通り <code>description</code> で設定したAPIの説明が表示されることが確認できます。</p>
+<h3 is-upgraded>更にカスタマイズしてみる</h3>
+<p>最後にAPIドキュメントのタイトルを修正したり、ドキュメントに概要を追加してみます。</p>
+<p>APIドキュメント全体の定義はFastAPIのインスタンスを定義する時にカスタマイズすることができます。つまり、 <code>main.py</code> の <code>app = FastAPI()</code> を以下の通り修正することでAPIドキュメントを更新することができます。</p>
+<pre><code>app = FastAPI(
+    title=&#34;FastAPI Tutorial&#34;,
+    summary=&#34;このAPIはFastAPIのチュートリアルとして掲示板のAPIを提供します。&#34;,
+)</code></pre>
+<p>自動保存、サーバーが再起動した後にドキュメントをリロードします。以下の通りドキュメントのタイトル、概要が更新されます。</p>
+<p class="image-container"><img style="width: 601.70px" src="img\\a8a01f404e8004d2.png"></p>
+<p>これ以外にもドキュメントをカスタマイズすることができますので、詳細は以下のリンクをご確認いただけると参考になります。</p>
+<p><a href="https://fastapi.tiangolo.com/ja/tutorial/metadata/" target="_blank">https://fastapi.tiangolo.com/ja/tutorial/metadata/</a></p>
+<h2 is-upgraded>Redoc</h2>
+<p>これまではSwagger形式のAPIドキュメントを紹介しましたが、Redocという形式でAPIドキュメントを表示させることができます。ブラウザで <code>【GitpodのサーバーURL】/redoc</code> を開くと、以下のようなAPIドキュメントが表示されます。</p>
+<p>パブリックに公開されているようなAPIドキュメントもFastAPIなら簡単に生成することができます。</p>
+<p class="image-container"><img style="width: 601.70px" src="img\\651711e05676dba5.png"></p>
+<h2 is-upgraded>ここまでのソースコード</h2>
+<p>ここまでで実装してきたソースコードを最後のまとめとして掲載します。エラーが出たときなどに参考用としてご確認ください。</p>
+<p>main.py</p>
+<pre><code>from fastapi import FastAPI, Depends, HTTPException, Request
+import logging
+import schemes
+
+app = FastAPI(
+    title=&#34;FastAPI Tutorial&#34;,
+    summary=&#34;このAPIはFastAPIのチュートリアルとして掲示板のAPIを提供します。&#34;,
+)
+logger = logging.getLogger(&#39;uvicorn&#39;)
+
+
+@app.get(&#34;/&#34;, response_model=schemes.MessageResponse, description=&#34;接続確認用のAPIです。&#34;)
+async def root():
+    return {&#34;message&#34;: &#34;Hello World&#34;}
+
+@app.post(&#34;/entry&#34;, response_model=schemes.MessageResponse, description=&#34;掲示板にエントリーを新規追加します。&#34;)
+async def create_entry(entry: schemes.EntryRequest):
+    logger.info(f&#34;Received entry: {entry}&#34;)
+    return {&#34;message&#34;: &#34;Entry created&#34;}
+
+@app.delete(&#34;/entry/{entry_id}&#34;, response_model=schemes.MessageResponse, description=&#34;IDを指定して掲示板のエントリーを削除します。&#34;)
+async def delete_entry(entry_id: int):
+    logger.info(f&#34;Entry {entry_id} deleted&#34;)
+    return {&#34;message&#34;: f&#34;Entry {entry_id} deleted&#34;}
+</code></pre>
+<p>schemes.py</p>
+<pre><code>from pydantic import BaseModel
+
+class EntryRequest(BaseModel):
+    title: str = &#39;Title&#39;
+    content: str = &#39;This is content&#39;
+    user_name: str = &#39;User&#39;
+
+
+class MessageResponse(BaseModel):
+    message: str = &#39;This message is example&#39;
+</code></pre>
+<h2 is-upgraded>まとめ</h2>
+<p>ここまでOpenAPIのAPIドキュメントの中身をカスタマイズする方法を紹介しました。通常だとサードパーティーのドキュメントジェネレーターを使って生成したりすることがありますが、FastAPIだとデフォルトの機能を駆使することでOpenAPIのドキュメントが簡単に生成できます。</p>
+<p>スキーマの書き方がわかったところで、次のパートではデータベースをFastAPIで接続する方法を紹介します。</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Step3. データベースを接続する" duration="0">
+        <p>Webアプリケーションの開発において、データベースの利用は欠かせません。今回開発するアプリケーションでも掲示板で投稿したデータをデータベースに溜め込むようにする必要があります。</p>
+<p>そこでこのパートではFastAPIでデータベースを接続する方法を紹介します。</p>
+<h2 is-upgraded>今回のテーブル設計</h2>
+<p>データベースとの接続をする前に今回使用するデータベースのテーブル設計を紹介します。今回は掲示板で投稿されたデータを残すので以下のテーブル構成を用意していきます。</p>
+<table>
+<tr><td colspan="1" rowspan="1"><p>カラム名</p>
+</td><td colspan="1" rowspan="1"><p>型</p>
+</td><td colspan="1" rowspan="1"><p>キー</p>
+</td><td colspan="1" rowspan="1"><p>備考</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>id</p>
+</td><td colspan="1" rowspan="1"><p>int</p>
+</td><td colspan="1" rowspan="1"><p>primary</p>
+</td><td colspan="1" rowspan="1"><p>投稿ID</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>title</p>
+</td><td colspan="1" rowspan="1"><p>str</p>
+</td><td colspan="1" rowspan="1"><p>-</p>
+</td><td colspan="1" rowspan="1"><p>タイトル</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>content</p>
+</td><td colspan="1" rowspan="1"><p>str</p>
+</td><td colspan="1" rowspan="1"><p>-</p>
+</td><td colspan="1" rowspan="1"><p>本文</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>user_name</p>
+</td><td colspan="1" rowspan="1"><p>str</p>
+</td><td colspan="1" rowspan="1"><p>-</p>
+</td><td colspan="1" rowspan="1"><p>ユーザー名</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>created_at</p>
+</td><td colspan="1" rowspan="1"><p>datetime</p>
+</td><td colspan="1" rowspan="1"><p>-</p>
+</td><td colspan="1" rowspan="1"><p>投稿日時</p>
+</td></tr>
+</table>
+<h2 is-upgraded>モデルの作成</h2>
+<h3 is-upgraded>FastAPIを使ったデータベース操作について</h3>
+<p>テーブル設計を確認したところで今回のテーブル構成を構築するためのモデルを作成します。FastAPIではライブラリとしてDBのORM(DB操作をオブジェクト志向的に行うためのツール)を提供しているわけではないため、自分で用意する必要があります。</p>
+<p>ここでは、FastAPIの公式ドキュメントでも紹介されているSQL Alchemyを使ったDBのモデル作成を行います。SQL Alchemyでは以下のSQLサーバーの接続に対応しています。</p>
+<ul>
+<li>PostgreSQL</li>
+<li>MySQL</li>
+<li>SQLite</li>
+<li>Oracle</li>
+<li>Microsoft SQL Serverなど</li>
+</ul>
+<p>今回はローカルで手軽にDBを扱うので、SQLiteを使ってDBの接続を行いますが、DBの接続先、及び接続に必要になるドライバーをインストールすればSQLite以外のデータベースにも今回作成するモデルをそのまま使ってデータ操作ができます。</p>
+<h3 is-upgraded>database.pyの実装</h3>
+<p>DBの操作方法について解説したところで、実際にモデルを作成していきます。</p>
+<p>まずはデータベースの接続情報を定義するコードを用意します。</p>
+<p>以下のコマンドで <code>database.py</code> を新規作成します。</p>
+<pre><code>touch /workspace/gitpod-python-playground/database.py</code></pre>
+<p>エディタで <code>database.py</code> を開き、以下のコードを記述します。</p>
+<pre><code>from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+
+engine = create_engine(&#34;sqlite:///./database.sqlite&#34;)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+</code></pre>
+<h3 is-upgraded>models.pyの実装</h3>
+<p>続いて、今回使用するテーブルのモデルを実装します。</p>
+<p>以下のコマンドで <code>models.py</code> を用意します。</p>
+<pre><code>touch /workspace/gitpod-python-playground/models.py</code></pre>
+<p>エディタで <code>models.py</code> を開き、以下のコードを記述します。</p>
+<pre><code>from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy.sql import func
+from database import Base
+
+
+class Entry(Base):
+    __tablename__ = &#34;entries&#34;
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    title = Column(String)
+    content = Column(String)
+    user_name = Column(String)
+    created_at = Column(DateTime, server_default=func.now())
+</code></pre>
+<h2 is-upgraded>スキーマを定義</h2>
+<p>DBの操作であるCRUD(Create, Read, Update, Delete)をより効率よく行うためにリクエスト、レスポンス同様スキーマを定義します。スキーマを定義することでORM上の型とプログラム上の型を明確にできます。</p>
+<p>schemes.py を開き、以下のClass文を追加します。</p>
+<pre><code>class Entry(BaseModel):
+    id: int
+    title: str
+    content: str
+    user_name: str
+    created_at: str
+
+    class Config:
+        orm_mode = True
+</code></pre>
+<h2 is-upgraded>CRUDの実装</h2>
+<p>スキーマを定義したらDBの操作を行うためのCRUDのコードを実装します。</p>
+<p>以下のコマンドで <code>crud.py</code> を新規作成します。</p>
+<pre><code>touch /workspace/gitpod-python-playground/crud.py</code></pre>
+<p><code>curd.py</code> のコマンドを開いたら以下のコードを記入します。</p>
+<pre><code>from sqlalchemy.orm import Session
+import models
+import schemes
+
+
+def get_entries(db: Session):
+    return db.query(models.Entry).all()
+
+def create_entry(db: Session, entry: schemes.EntryRequest):
+    db_entry = models.Entry(
+        title=entry.title,
+        content=entry.content,
+        user_name=entry.user_name
+    )
+    db.add(db_entry)
+    db.commit()
+    db.refresh(db_entry)
+    return db_entry
+
+def delete_entry(db: Session, entry_id: int):
+    db_entry = db.query(models.Entry).filter(models.Entry.id == entry_id).first()
+    if db_entry is None:
+        raise AttributeError(f&#34;Entry {entry_id} not found&#34;)
+    db.delete(db_entry)
+    db.commit()
+    return db_entry
+</code></pre>
+<h2 is-upgraded>アプリケーションと接続</h2>
+<p>これで一通りデータベースを操作するための準備ができたので、アプリケーションからデータベースに接続できるようにします。</p>
+<h3 is-upgraded>必要なimport文の追加とデータベースの作成</h3>
+<p><code>main.py</code> を開いてimport文を記述している箇所の一番下に以下のコードを追加します。</p>
+<p>import文の直後にある <code>models.Base.metadata.create_all(bind=engine)</code> を記述することで接続先のデータベース上に今回使用するテーブルが存在しない場合は新規作成されます。</p>
+<pre><code>...
+import schemes
+
+import crud
+import models
+from database import SessionLocal, engine
+from sqlalchemy.orm import Session
+
+models.Base.metadata.create_all(bind=engine)
+
+app = FastAPI(
+...</code></pre>
+<p>自動保存、サーバーが再起動されると <code>database.db</code> というファイルが新規作成されます。このファイルが今回使用するsqliteのデータベースになります。</p>
+<h3 is-upgraded>APIのリクエスト時に使う関数を用意</h3>
+<p>続けて <code>main.py</code> でロギングの定義をしている <code>logger = logging.getLogger('uvicorn')</code> の下に以下の関数を追加します。</p>
+<p>この関数をAPI単位で呼び出すようにすることでAPIのリクエスト毎にデータベースのセッションを作成、接続を確立し、リクエストが終わるとセッションを閉じるようにしています。</p>
+<pre><code>...
+logger = logging.getLogger(&#39;uvicorn&#39;)
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+...</code></pre>
+<h3 is-upgraded>データベースの中身を確認する</h3>
+<h4 is-upgraded>コマンドラインで確認</h4>
+<p>ここまででテーブル操作をするための下準備をしてきましたが、APIの実装に入る前にデータベースの中身を確認する方法を紹介します。SQLiteは以下のコマンドを実行することでSQLiteのクライアントでDBに接続します。</p>
+<pre><code>sqlite3 database.db</code></pre>
+<p>接続後、以下のSQLを実行することでテーブルの中身を確認できます。</p>
+<pre><code>SQLite version 3.40.1 2022-12-28 14:03:47
+Enter &#34;.help&#34; for usage hints.
+sqlite&gt; SELECT * FROM entries ;
+1|Title|First entry|undefined|2024-05-03 12:47:27</code></pre>
+<h3 is-upgraded>エディタの拡張機能を使う</h3>
+<p>SQLiteの中身を確認するときにはコマンドラインで接続する方法がメインですが、VSCodeの拡張機能を使って確認する方法があります。</p>
+<p>エディタで拡張機能の管理画面を <code>Ctrl + Shift + x (Macの場合は Cmd + Shift + x)</code> で開いて検索窓から <code>qwtel.sqlite-viewer</code> を検索してトップに出てくるSQLite Viewerをインストールします。</p>
+<p class="image-container"><img style="width: 287.00px" src="img\\f9c7a9fa2b7f4ac4.png"></p>
+<p>インストール後、エディタで <code>database.db</code> を選択してSQLite Viewerを使って開くと直感的にデータの中身を確認できます。</p>
+<p class="image-container"><img style="width: 601.70px" src="img\\902b42cd943d30d6.png"></p>
+<h3 is-upgraded>APIでテーブルを操作できるようにする</h3>
+<h4 is-upgraded>POST /entry</h4>
+<p>ここから実際にAPIのリクエストがあった時に行うデータベースの処理を追加していきます。まずは、新規投稿を追加する処理です。</p>
+<p><code>main.py</code> の関数 <code>create_entry</code> を以下の関数に書き換えます。</p>
+<pre><code>async def create_entry(entry: schemes.EntryRequest, db: Session = Depends(get_db)):
+    logger.info(f&#34;Received entry: {entry}&#34;)
+    crud.create_entry(db, entry)
+    return {&#34;message&#34;: &#34;Entry created&#34;}
+</code></pre>
+<p>自動保存、サーバーが再起動されると更新したAPIが使える状態になります。Step2で紹介したAPIドキュメントの中の「POST /entry」の項目のトグルを開いて「Try it out」ボタンをクリックして「Execute」ボタンをクリックすると、リクエストが実行されます。</p>
+<p class="image-container"><img style="width: 601.70px" src="img\\86db0ff48bc3782b.png"></p>
+<p>実行後、以下の通りサーバーレスポンスのコードが「200」を返したらリクエストは正常に完了しています。もし、ステータスコードが「500」の場合はサーバー側でエラーが出ているため、サーバーを起動しているターミナルをご確認ください。</p>
+<p class="image-container"><img style="width: 601.70px" src="img\\d043a8ea2cd29e65.png"></p>
+<h4 is-upgraded>DELETE /entry</h4>
+<p>続いて投稿を削除する処理です。</p>
+<p><code>main.py</code> の関数 <code>delete_entry</code> を以下の関数に書き換えます。</p>
+<pre><code>async def delete_entry(entry_id: int, db: Session = Depends(get_db)):
+    try: 
+        crud.delete_entry(db, entry_id)
+    except AttributeError:
+        logger.error(f&#34;Entry {entry_id} not found&#34;)
+        raise HTTPException(status_code=404, detail=f&#34;Entry {entry_id} not found&#34;)
+    logger.info(f&#34;Entry {entry_id} deleted&#34;)
+    return {&#34;message&#34;: f&#34;Entry {entry_id} deleted&#34;}
+</code></pre>
+<p>自動保存、サーバーが再起動されると更新したAPIが使える状態になります。Step2で紹介したAPIドキュメントの中の「DELETE /entry」の項目のトグルを開いて「Try it out」ボタンをクリックしたら、投稿IDを入力します。今回使用するテーブルのIDは追加された順にインクリメントされるので、試しに <code>1</code> を入力します。</p>
+<p>IDを入力したら「Execute」ボタンをクリックすると、リクエストが実行されます。</p>
+<p class="image-container"><img style="width: 601.70px" src="img\\621d11cacde92e97.png"></p>
+<p>以下の通りサーバーからのレスポンスが返ってきたらサーバーは正常に動作しています。</p>
+<p class="image-container"><img style="width: 601.70px" src="img\\3e929be0f197d196.png"></p>
+<h2 is-upgraded>まとめ</h2>
+<p>このステップではデータベースをFastAPIで扱う方法を紹介しました。Djangoとは違って自分で実装する箇所が多いため、多少手間ですが公式ドキュメントでもこの手順がチュートリアルでも紹介されているので実装に困ることはないと思います。</p>
+<p>また、今回は取り上げませんがDjangoのようなマイグレーションをしたい時には使用するORMに対応したマイグレーションツール(テーブル構成を更新するツールのこと)を導入する必要があります。</p>
+<p>ここまででサーバーと通信をするためのAPIが用意できたので、最後のパートでは画面を作成して掲示板アプリをブラウザから使えるようにしましょう。</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="Step4. テンプレートを使う" duration="0">
+        <p>ここまででAPIは用意しましたが、最後にHTMLを用意してこれまで作成したAPIをつなぎこんだ掲示板アプリケーションを開発していきます。</p>
+<p>なお、今回はあくまでFastAPIがメインなのでJavaScriptやCSSといったフロントエンド周りの話はあまり深く解説しません。</p>
+<h2 is-upgraded>テンプレートエンジンとは？</h2>
+<p>ここではHTMLの表示に<strong>テンプレートエンジン</strong>を使います。</p>
+<p>テンプレートエンジンとは、動的なコンテンツ生成に使用されるフレームワークやソフトウェアを指します。PythonのテンプレートエンジンだとJinja2が最も使われています。</p>
+<p>FastAPIとよく似ているFlaskというフレームワークではこのJinja2がテンプレートエンジンとしてサポートされています。FastAPIでは任意のテンプレートエンジンを使うことができますが、直接Jinja2が使えるようにサポートされているので今回はJinja2をつかっていきます。</p>
+<h2 is-upgraded>ページを用意する</h2>
+<p>テンプレートエンジンについて紹介したところで、HTMLを作成します。</p>
+<p>以下のコマンドでHTMLの保存先、そして表示に使うHTMLファイルを新規作成します。</p>
+<pre><code>mkdir -p /workspace/gitpod-python-playground/templates
+touch /workspace/gitpod-python-playground/templates/entry.html</code></pre>
+<p><code>templates/entry.html</code> を開き以下のコードを書き込みます。</p>
+<pre><code>&lt;!-- templates/entry.html --&gt;
+&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+
+&lt;head&gt;
+  &lt;title&gt;Py Channel&lt;/title&gt;
+  &lt;link href=&#34;https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css&#34; rel=&#34;stylesheet&#34;
+    integrity=&#34;sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN&#34; crossorigin=&#34;anonymous&#34;&gt;
+  &lt;link href=&#34;https://use.fontawesome.com/releases/v6.2.0/css/all.css&#34; rel=&#34;stylesheet&#34;&gt;
+  &lt;script src=&#34;https://cdn.jsdelivr.net/npm/axios@1.6.7/dist/axios.min.js&#34;&gt;&lt;/script&gt;
+&lt;/head&gt;
+
+&lt;body&gt;
+  &lt;nav class=&#34;navbar navbar-expand-lg navbar-dark bg-primary&#34;&gt;
+    &lt;div class=&#34;container-fluid&#34;&gt;
+      &lt;a class=&#34;navbar-brand&#34; href=&#34;/&#34;&gt;Py Channel&lt;/a&gt;
+    &lt;/div&gt;
+  &lt;/nav&gt;
+  &lt;div class=&#34;container mb-4&#34;&gt;
+    &lt;form id=&#34;entry-form&#34;&gt;
+      &lt;div class=&#34;mb-3&#34;&gt;
+        &lt;label for=&#34;title&#34; class=&#34;form-label&#34;&gt;Title&lt;/label&gt;
+        &lt;input type=&#34;text&#34; class=&#34;form-control&#34; id=&#34;title&#34; name=&#34;title&#34;&gt;
+      &lt;/div&gt;
+      &lt;div class=&#34;mb-3&#34;&gt;
+        &lt;label for=&#34;content&#34; class=&#34;form-label&#34;&gt;Content&lt;/label&gt;
+        &lt;textarea class=&#34;form-control&#34; id=&#34;content&#34; name=&#34;content&#34;&gt;&lt;/textarea&gt;
+      &lt;/div&gt;
+      &lt;div class=&#34;mb-3&#34;&gt;
+        &lt;label for=&#34;image&#34; class=&#34;form-label&#34;&gt;Name&lt;/label&gt;
+        &lt;input type=&#34;text&#34; class=&#34;form-control&#34; id=&#34;user_name&#34; name=&#34;user_name&#34;&gt;
+      &lt;/div&gt;
+      &lt;button type=&#34;submit&#34; class=&#34;btn btn-primary&#34;&gt;Submit&lt;/button&gt;
+    &lt;/form&gt;
+  &lt;/div&gt;
+  &lt;div class=&#34;nav justify-content-center&#34;&gt;
+    {% for entry in entries %}
+    &lt;div class=&#34;card w-75&#34;&gt;
+      &lt;div class=&#34;card-body&#34;&gt;
+        &lt;h5 class=&#34;card-title&#34;&gt;&#123;&#123; entry.title }}&lt;/h5&gt;
+        &lt;p class=&#34;card-text&#34;&gt;&#123;&#123; entry.content }}&lt;/p&gt;
+        &lt;div class=&#34;row row-cols-lg-auto g-3 float-end&#34;&gt;
+          &lt;div class=&#34;col-12&#34;&gt;
+            &lt;p class=&#34;card-text&#34;&gt;&lt;small class=&#34;text-muted&#34;&gt;&#123;&#123; entry.user_name }} - &#123;&#123; entry.created_at }}&lt;/small&gt;&lt;/p&gt;
+          &lt;/div&gt;
+          &lt;div class=&#34;col-12&#34;&gt;
+            &lt;i class=&#34;fa-solid fa-trash&#34; name=&#34;delete&#34; id=&#34;&#123;&#123; entry.id }}&#34; onclick=&#34;deleteEntry()&#34;&gt;&lt;/i&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+    {% endfor %}
+  &lt;/div&gt;
+&lt;/body&gt;
+&lt;script&gt;
+  const form = document.getElementById(&#39;entry-form&#39;);
+  form.addEventListener(&#39;submit&#39;, async (event) =&gt; {
+    event.preventDefault();
+    const title = document.getElementById(&#39;title&#39;).value;
+    const content = document.getElementById(&#39;content&#39;).value;
+    const user_name = document.getElementById(&#39;user_name&#39;).value;
+    const response = await axios.post(&#39;/entry&#39;, {
+      title,
+      content,
+      user_name
+    });
+    if (response.status === 200) {
+      window.location.reload();
+    }
+  });
+  
+  function deleteEntry() {
+    const id = event.target.id;
+    axios.delete(`/entry/${id}`).then((response) =&gt; {
+      if (response.status === 200) {
+        window.location.reload();
+      }
+    });
+  }
+&lt;/script&gt;
+
+&lt;/html&gt;
+</code></pre>
+<h2 is-upgraded>サーバーで表示できるようにする</h2>
+<p>HTMLの用意ができたところでサーバーで必要なデータを取得、画面表示されるように実装していきます。</p>
+<p><code>main.py</code> を開き、import文に以下の1行を追加します。</p>
+<pre><code>from fastapi.templating import Jinja2Templates</code></pre>
+<p>同じく main.py のロギングを定義している箇所の下に以下の1行を加えます。</p>
+<pre><code>...
+logger = logging.getLogger(&#39;uvicorn&#39;)
+templates = Jinja2Templates(directory=&#34;templates&#34;)
+...</code></pre>
+<p>続けて <code>main.py</code> の中の <code>root</code> 関数を以下の関数に書き換えます。</p>
+<pre><code>async def root(request: Request, db: Session = Depends(get_db)):
+    entries = crud.get_entries(db)
+    return templates.TemplateResponse(request=request, name=&#34;entry.html&#34;, context={&#39;entries&#39;: entries})
+</code></pre>
+<p>自動保存、サーバーの再起動後、GitpodのサーバーURLをそのままブラウザで開きます。するとStep1ではJSONが表示されていたのが、以下のようなWebページを表示するように挙動が変わったことが確認できます。</p>
+<p class="image-container"><img style="width: 601.70px" src="img\\d07ad30a7e5848b0.png"></p>
+<p>試しに画面上部のフォームに掲示板のタイトル、本文、名前を記入すると以下の通り投稿一覧に送信した内容が表示されることが確認できます。</p>
+<p class="image-container"><img style="width: 601.70px" src="img\\5faf5e24b6ce2a55.png"></p>
+<p>投稿の右下にあるゴミ箱アイコンをクリックすると該当の投稿が削除されるようになります。</p>
+<p class="image-container"><img style="width: 601.70px" src="img\\da1d4b7c60f9cb15.png"></p>
+<h2 is-upgraded>今回のハンズオンのソースコード</h2>
+<p>今秋のハンズオンの全体のソースコードは以下のGithubのレポジトリで公開しています。このハンズオンが良かったと思ってもらえて、Githubのアカウントをお持ちの方はぜひStarをつけてもらえると今後のモチベーションにつながるのでぜひよろしくお願いします。</p>
+<p><a href="https://github.com/Miura55/fastapi_tutorial" target="_blank">https://github.com/Miura55/fastapi_tutorial</a></p>
+<h2 is-upgraded>まとめ</h2>
+<p>ここまで実装してきたAPIを使用してブラウザで動作するWebアプリケーションが出来上がりました。</p>
+<p>今回紹介したようにテンプレートエンジンを使うことでサーバーで取得したデータを画面に直接表示させることが簡単にできます。</p>
+<p>近年だとフロントエンドフレームワークであるVue.jsやReactを使ったWebページが多く存在しますが、FastAPIはこれらのフレームワークを使って作成したアプリケーションのサーバーサイドとして活用する時には相性がいいです。</p>
+<p>FastAPIを活用したアプリケーションのサンプルは公式ドキュメントでも紹介されているので、本格的にFastAPIを使ってみたい方はぜひ参考にしていただけると良いかと思います。</p>
+<p><a href="https://fastapi.tiangolo.com/ja/project-generation/#-" target="_blank">https://fastapi.tiangolo.com/ja/project-generation/#-</a></p>
+<p>ここまでできたら最低限動くアプリは完成です。次のステップでは早くハンズオンが終わった方向けに今回開発したアプリケーションを更に改良するためのアイデアをいくつか紹介します。</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="ここまでできた方への応用課題" duration="0">
+        <p>ここまでハンズオンの手順は以上ですが、ここではいくつか今回開発したアプリケーションを改良していくためのアイデアを紹介します。</p>
+<p>詳細な手順はあえて割愛しますが、実現するためのヒント、参考にすべき情報は紹介するので参考にしていただけると幸いです。</p>
+<h2 is-upgraded>データベースのマイグレーション</h2>
+<p>今回使用したSQL AlchemyはデータベースのORMとしての役割がありますが、Step3でも言及した通りすでに作成したテーブルの構成を更新するときにはマイグレーションツールを導入する必要があります。このあと紹介する機能のアイデアの中には一部新たにテーブルを追加したり構成を変更する必要もあるので応用課題に挑戦する方は、先に取り組むことをおすすめします。</p>
+<p>SQLAlchemy用のマイグレーションツールとしてはAlembicというツールが使われます。</p>
+<p><a href="https://alembic.sqlalchemy.org/en/latest/" target="_blank">https://alembic.sqlalchemy.org/en/latest/</a></p>
+<p>具体的な導入手順としては以下のブログが参考になります。ブログではMySQLを接続する例ですが、接続先を変えればSQLiteでも実現可能です。</p>
+<p><a href="https://www.sria.co.jp/blog/2021/06/5557/" target="_blank">https://www.sria.co.jp/blog/2021/06/5557/</a></p>
+<h2 is-upgraded>リアクション機能を用意する</h2>
+<p>リアクションはXなどのSNSでよくある機能です。この機能を追加するには、Step3のテーブル設計に新たに likes のようなカラムを追加してみると簡単に実現できるかと思います。</p>
+<table>
+<tr><td colspan="1" rowspan="1"><p>カラム名</p>
+</td><td colspan="1" rowspan="1"><p>型</p>
+</td><td colspan="1" rowspan="1"><p>キー</p>
+</td><td colspan="1" rowspan="1"><p>デフォルト</p>
+</td><td colspan="1" rowspan="1"><p>備考</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>id</p>
+</td><td colspan="1" rowspan="1"><p>int</p>
+</td><td colspan="1" rowspan="1"><p>primary</p>
+</td><td colspan="1" rowspan="1"><p>-</p>
+</td><td colspan="1" rowspan="1"><p>投稿ID</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>title</p>
+</td><td colspan="1" rowspan="1"><p>str</p>
+</td><td colspan="1" rowspan="1"><p>-</p>
+</td><td colspan="1" rowspan="1"><p>-</p>
+</td><td colspan="1" rowspan="1"><p>タイトル</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>content</p>
+</td><td colspan="1" rowspan="1"><p>str</p>
+</td><td colspan="1" rowspan="1"><p>-</p>
+</td><td colspan="1" rowspan="1"><p>-</p>
+</td><td colspan="1" rowspan="1"><p>本文</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>user_name</p>
+</td><td colspan="1" rowspan="1"><p>str</p>
+</td><td colspan="1" rowspan="1"><p>-</p>
+</td><td colspan="1" rowspan="1"><p>-</p>
+</td><td colspan="1" rowspan="1"><p>ユーザー名</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p><strong>likes</strong></p>
+</td><td colspan="1" rowspan="1"><p><strong>int</strong></p>
+</td><td colspan="1" rowspan="1"><p>-</p>
+</td><td colspan="1" rowspan="1"><p>0</p>
+</td><td colspan="1" rowspan="1"><p><strong>ユーザーのリアクション数(新規追加)</strong></p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>created_at</p>
+</td><td colspan="1" rowspan="1"><p>datetime</p>
+</td><td colspan="1" rowspan="1"><p>-</p>
+</td><td colspan="1" rowspan="1"><p>-</p>
+</td><td colspan="1" rowspan="1"><p>投稿日時</p>
+</td></tr>
+</table>
+<p>あとは、 <code>PATCH /entry/{entry_id}</code> でリクエストを実行することで <code>likes</code> の数字を更新する形でデータを記録するといいでしょう。</p>
+<p>あとは、HTMLで表示する時はリアクション数を表示する項目を追加すればリアクション機能を簡易的に実装できると思います。</p>
+<h2 is-upgraded>リプライを実装する</h2>
+<p>SNSだとメッセージに対して他の人がメッセージを投げるような処理もあるかと思います。</p>
+<p>リプライのメッセージについてはタイトルを入れる必要性はないと思うので、リプライ用に以下の構造のテーブル <code>replies</code> を用意すると整理しやすいかと思います。</p>
+<table>
+<tr><td colspan="1" rowspan="1"><p>カラム名</p>
+</td><td colspan="1" rowspan="1"><p>型</p>
+</td><td colspan="1" rowspan="1"><p>キー</p>
+</td><td colspan="1" rowspan="1"><p>備考</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>id</p>
+</td><td colspan="1" rowspan="1"><p>int</p>
+</td><td colspan="1" rowspan="1"><p>primary</p>
+</td><td colspan="1" rowspan="1"><p>リプライID</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>entry_id</p>
+</td><td colspan="1" rowspan="1"><p>int</p>
+</td><td colspan="1" rowspan="1"><p>-</p>
+</td><td colspan="1" rowspan="1"><p>投稿ID(entriesと紐づいている)</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>content</p>
+</td><td colspan="1" rowspan="1"><p>str</p>
+</td><td colspan="1" rowspan="1"><p>-</p>
+</td><td colspan="1" rowspan="1"><p>本文</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>user_name</p>
+</td><td colspan="1" rowspan="1"><p>str</p>
+</td><td colspan="1" rowspan="1"><p>-</p>
+</td><td colspan="1" rowspan="1"><p>ユーザー名</p>
+</td></tr>
+<tr><td colspan="1" rowspan="1"><p>created_at</p>
+</td><td colspan="1" rowspan="1"><p>datetime</p>
+</td><td colspan="1" rowspan="1"><p>-</p>
+</td><td colspan="1" rowspan="1"><p>投稿日時</p>
+</td></tr>
+</table>
+<p>APIとしては <code>GET /entry/{entry_id}</code> を追加することで投稿に紐づくメッセージを取得することができて画面描画も簡単になると思います。</p>
+<p>もしリアクション機能を追加する時は上記のテーブルに <code>likes</code> カラムを追加すると良いです。</p>
+<p>ハンズオンの内容は以上になります。お疲れ様でした！</p>
+<p>次のページでは削除の手順を紹介していきます。</p>
+
+
+      </google-codelab-step>
+    
+      <google-codelab-step label="片付け" duration="0">
+        <h2 is-upgraded>Gitpodのインスタンスの削除</h2>
+<p>Gitpodはフリープランであればタイムアウトでインスタンスが止まるだけで請求は来ないのでハンズオンの復習をするために残してもいいですし、削除したい場合は <a href="https://gitpod.io/workspaces" target="_blank">https://gitpod.io/workspaces</a> から削除することができます。</p>
+<p class="image-container"><img style="width: 601.70px" src="img\\e5584624f3714d6.png"> </p>
+
+
+      </google-codelab-step>
+    
+  </google-codelab>
+
+  <script src="https://storage.googleapis.com/claat-public/native-shim.js"></script>
+  <script src="https://storage.googleapis.com/claat-public/custom-elements.min.js"></script>
+  <script src="https://storage.googleapis.com/claat-public/prettify.js"></script>
+  <script src="https://storage.googleapis.com/claat-public/codelab-elements.js"></script>
+  <script src="//support.google.com/inapp/api.js"></script>
+
+</body>
+</html>

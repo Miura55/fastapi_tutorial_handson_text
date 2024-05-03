@@ -1,0 +1,26 @@
+{
+  "environment": "web",
+  "format": "html",
+  "prefix": "https://storage.googleapis.com",
+  "mainga": "UA-49880327-14",
+  "updated": "2024-05-03T13:06:10Z",
+  "id": "fastapi-handson",
+  "duration": 0,
+  "title": "FastAPI入門ハンズオン",
+  "authors": "Koki Miura",
+  "summary": "Pythonの軽量フレームワークであるFastAPIを使ったWebアプリケーション開発の入門ハンズオンです",
+  "source": "1fCwNMZg45iuZj5MUcU9cGkWoroVu7ZVNazT4sC7KIPE",
+  "theme": "web",
+  "status": [
+    "published"
+  ],
+  "category": [
+    "web"
+  ],
+  "tags": [
+    "fastapi",
+    "python"
+  ],
+  "feedback": "https://twitter.com/k_miura_io",
+  "url": "fastapi-handson"
+}
