@@ -34,8 +34,9 @@
 <p>Step1では簡単なAPIを使ってWebアプリケーションの動かす仕組みを理解していきます</p>
 <p>Step2では使用したAPIの使い方をわかりやすく整理するためにOpenAPIのドキュメントを作成します。</p>
 <p>Step3ではデータベースを使ったAPIを開発していきます。</p>
-<p>Step4ではHTMLを用意してStep1〜3で作成したAPIを使用したWebアプリケーションを開発していきます。</p>
-<p>最終的には簡易的な掲示板アプリを作成することを目指します。</p>
+<p>Step4ではHTMLを用意してStep1〜4で作成したAPIを使用したWebアプリケーションを開発していきます。</p>
+<p>最終的には以下のスクショにある簡易的な掲示板アプリを作成することを目指します。</p>
+<p class="image-container"><img style="width: 601.70px" src="img\\5d9ba96ded45cb4.png"></p>
 <h2 is-upgraded>FastAPIについて解説</h2>
 <p class="image-container"><img style="width: 601.70px" src="img\\a1beb692b5b79c5b.png"></p>
 <p>FastAPIはPythonのWebフレームワークの中では比較的新しいフレームワークで、非同期処理に対応しています。Flaskに近い記法なのでFlask触ったことある方なら同じ感覚でAPIを実装できます。</p>
@@ -50,9 +51,12 @@
       <google-codelab-step label="ハンズオンの準備" duration="0">
         <h2 is-upgraded>Gitpodのワークスペースを用意する</h2>
 <p>今回は簡単に環境構築をできるようにGitpodというサービスを使用してオンラインの開発環境を構築します。以下のリポジトリにアクセスします。</p>
-<p><a href="https://github.com/Miura55/chatgptbot-handson" target="_blank">https://github.com/Miura55/chatgptbot-handson</a></p>
+<p><a href="https://github.com/Miura55/gitpod-python-playground" target="_blank">https://github.com/Miura55/gitpod-python-playground</a></p>
 <p>レポジトリの下部にあるREADMEにある <code>Open in Gitpod</code> をクリックすることで今回のハンズオンの開発を構築します。</p>
 <p class="image-container"><img style="width: 601.70px" src="img\\4f59f17aba51706c.png"></p>
+<p>以下のワークスペース作成画面が表示されるので、IDEが「VSCode -Browser-」になっていることを確認します。手元にVS Code、またはJetBrain系のIDEをお持ちの場合はDesktop版を選択しても結構です。セットアップについては以下のリンクのドキュメントを参考に必要な拡張機能のセットアップを行ってください。</p>
+<p><a href="https://www.gitpod.io/docs/references/ides-and-editors/vscode" target="_blank">https://www.gitpod.io/docs/references/ides-and-editors/vscode</a></p>
+<p class="image-container"><img style="width: 601.70px" src="img\\1d3780ac224dfa15.png"></p>
 <p>以下のようにオンラインのIDEが起動されたら開発環境構築は完了です。</p>
 <p class="image-container"><img style="width: 601.70px" src="img\\c68a8dc5f3bec13e.png"></p>
 <p>ここまでできたらハンズオンの準備は完了です。次のステップでからハンズオンを進めていきましょう。</p>
@@ -103,7 +107,8 @@ INFO:     Application startup complete.</code></pre>
   &#34;content&#34;: &#34;Hello World&#34;
   &#34;user_name&#34;: &#34;Taro&#34;
 }</code></pre>
-<p>まずはこのJSONを送信するためにスキーマを定義します。以下のコマンドを実行してJSONのフォーマットを定義するためのファイルを新規で作成します。</p>
+<p>まずはこのJSONを送信するためにスキーマを定義します。すでにサーバーを立ち上げているので、ここからのコマンド操作はサーバーを起動しているターミナルとは別にもう一つターミナルを開きます。ターミナルはターミナルの右上の＋ボタンをクリックすると開くことができます。</p>
+<p>以下のコマンドを実行してJSONのフォーマットを定義するためのファイルを新規で作成します。</p>
 <pre><code>touch /workspace/gitpod-python-playground/schemes.py</code></pre>
 <p><code>schemes.py</code> のファイルを開き、以下のコードを書き込みます。</p>
 <pre><code>from pydantic import BaseModel
@@ -202,7 +207,7 @@ curl -X DELETE ${SERVER_URL}/entry/1</code></pre>
 @app.delete(&#34;/entry/{entry_id}&#34;, response_model=schemes.MessageResponse)
 ...
 </code></pre>
-<p>自動保存されて自動保存されたら、ドキュメントをリロードします。リロードすると以下の通りAPIのレスポンスのフォーマットが表示されることが確認できます。</p>
+<p>自動保存され再起動されたら、ドキュメントをリロードします。リロードすると以下の通りAPIのレスポンスのフォーマットが表示されることが確認できます。</p>
 <p class="image-container"><img style="width: 601.70px" src="img\\e70092168600d01c.png"></p>
 <h3 is-upgraded>サンプルのパラメータを設定する</h3>
 <p>リクエスト、レスポンスボディをそれぞれ定義しました。ただ、ここでは文字列を送信するということでサンプルのパラメータはすべて <code>string</code> になっていますが、もう少し具体的なパラメータをイメージできるようにサンプルのパラメータを設定することもできます。</p>
@@ -621,7 +626,7 @@ templates = Jinja2Templates(directory=&#34;templates&#34;)
 <p>投稿の右下にあるゴミ箱アイコンをクリックすると該当の投稿が削除されるようになります。</p>
 <p class="image-container"><img style="width: 601.70px" src="img\\da1d4b7c60f9cb15.png"></p>
 <h2 is-upgraded>今回のハンズオンのソースコード</h2>
-<p>今秋のハンズオンの全体のソースコードは以下のGithubのレポジトリで公開しています。このハンズオンが良かったと思ってもらえて、Githubのアカウントをお持ちの方はぜひStarをつけてもらえると今後のモチベーションにつながるのでぜひよろしくお願いします。</p>
+<p>ハンズオンの全体のソースコードは以下のGithubのレポジトリで公開しています。今回作ったアプリケーションをローカルで動かすためのDocker環境も用意しているのでぜひクローンしてお使いいただけると嬉しいです。そして、このハンズオンが良かったと思ってもらえて、Githubのアカウントをお持ちの方はぜひStarをつけてもらえると今後のモチベーションにつながるのでぜひよろしくお願いします。</p>
 <p><a href="https://github.com/Miura55/fastapi_tutorial" target="_blank">https://github.com/Miura55/fastapi_tutorial</a></p>
 <h2 is-upgraded>まとめ</h2>
 <p>ここまで実装してきたAPIを使用してブラウザで動作するWebアプリケーションが出来上がりました。</p>
@@ -737,6 +742,7 @@ templates = Jinja2Templates(directory=&#34;templates&#34;)
       <google-codelab-step label="片付け" duration="0">
         <h2 is-upgraded>Gitpodのインスタンスの削除</h2>
 <p>Gitpodはフリープランであればタイムアウトでインスタンスが止まるだけで請求は来ないのでハンズオンの復習をするために残してもいいですし、削除したい場合は <a href="https://gitpod.io/workspaces" target="_blank">https://gitpod.io/workspaces</a> から削除することができます。</p>
+<p>無料枠だとインスタンスを立ち上げて作業できる時間の限度が合計50時間になります。</p>
 <p class="image-container"><img style="width: 601.70px" src="img\\e5584624f3714d6.png"> </p>
 
 
